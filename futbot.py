@@ -9,54 +9,154 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", help_command=None, intents=intents)
 
+# ESPN API Base URL
+BASE_URL = "http://site.api.espn.com/apis/site/v2/sports/soccer/uefa.champions"
+
+### **1. Live Match Updates** (`!ucl_scores`)
 @bot.command()
-async def ucl_teams(ctx):
-    url = "http://site.api.espn.com/apis/site/v2/sports/soccer/uefa.champions/teams"
+async def ucl_scores(ctx):
+    url = f"{BASE_URL}/scoreboard"
 
     try:
-        response = requests.get(url, timeout=10)  # Set timeout
-        response.raise_for_status()  # Raise error for non-200 responses
+        response = requests.get(url)
         data = response.json()
 
-        # Validate API response structure
-        if "sports" in data and data["sports"]:
-            leagues = data["sports"][0].get("leagues", [])
-            for league in leagues:
-                if "teams" in league:
-                    teams = league["teams"]
-                    teams_list = [
-                        f"🔹 {team['team']['displayName']} ({team['team'].get('abbreviation', 'N/A')}) - [More Info]({team['team']['links'][0]['href']})"
-                        for team in teams
-                    ]
+        if "events" not in data:
+            await ctx.send("❌ No live or recent UCL scores available.")
+            return
 
-                    # Discord character limit fix: Send messages in chunks
-                    message = "🏆 **UEFA Champions League Teams (2024-25)** 🏆\n"
-                    char_limit = 1900  # Leave space for formatting
-                    temp_message = message
+        matches = []
+        for event in data["events"]:
+            home = event["competitions"][0]["competitors"][0]["team"]["displayName"]
+            away = event["competitions"][0]["competitors"][1]["team"]["displayName"]
+            home_score = event["competitions"][0]["competitors"][0].get("score", "N/A")
+            away_score = event["competitions"][0]["competitors"][1].get("score", "N/A")
+            status = event["status"]["type"]["description"]
 
-                    for team in teams_list:
-                        if len(temp_message) + len(team) + 2 > char_limit:  # Check if adding another team exceeds limit
-                            await ctx.send(f"```{temp_message}```")
-                            temp_message = ""  # Reset for next chunk
-                        temp_message += f"{team}\n"
+            matches.append(f"⚽ {home} **{home_score} - {away_score}** {away} ({status})")
 
-                    if temp_message:  # Send any remaining teams
-                        await ctx.send(f"```{temp_message}```")
-                    return
+        message = "🏆 **Live UEFA Champions League Scores** 🏆\n```" + "\n".join(matches) + "```"
+        await ctx.send(message)
 
-        await ctx.send("❌ No teams found for UCL 2024-25. API response may have changed.")
-
-    except requests.exceptions.Timeout:
-        await ctx.send("⏳ Request timed out. Please try again later.")
-    except requests.exceptions.HTTPError as errh:
-        await ctx.send(f"❌ HTTP Error: {errh}")
-    except requests.exceptions.RequestException as err:
-        await ctx.send("⚠️ Unable to connect to ESPN API. Check your internet connection.")
-        print(f"Error: {err}")
     except Exception as e:
-        await ctx.send("⚠️ An unexpected error occurred while retrieving UCL teams.")
+        await ctx.send("⚠️ Error retrieving UCL scores.")
         print(f"Error: {e}")
 
-# Retrieve token from environment variables
+### **2. Upcoming Fixtures** (`!ucl_fixtures`)
+@bot.command()
+async def ucl_fixtures(ctx):
+    url = f"{BASE_URL}/scoreboard"
+
+    try:
+        response = requests.get(url)
+        data = response.json()
+
+        if "events" not in data:
+            await ctx.send("❌ No upcoming UCL fixtures available.")
+            return
+
+        fixtures = []
+        for event in data["events"]:
+            home = event["competitions"][0]["competitors"][0]["team"]["displayName"]
+            away = event["competitions"][0]["competitors"][1]["team"]["displayName"]
+            date = event["date"]
+
+            fixtures.append(f"📅 {home} vs {away} - {date}")
+
+        message = "📅 **Upcoming UEFA Champions League Matches** 📅\n```" + "\n".join(fixtures) + "```"
+        await ctx.send(message)
+
+    except Exception as e:
+        await ctx.send("⚠️ Error retrieving UCL fixtures.")
+        print(f"Error: {e}")
+
+### **3. League Standings & Group Stage Table** (`!ucl_standings`)
+@bot.command()
+async def ucl_standings(ctx):
+    url = f"{BASE_URL}/standings"
+
+    try:
+        response = requests.get(url)
+        data = response.json()
+
+        if "standings" not in data:
+            await ctx.send("❌ No UCL standings available.")
+            return
+
+        standings = []
+        for group in data["standings"]:
+            group_name = group["name"]
+            standings.append(f"\n📊 **{group_name}**")
+            for team in group["entries"]:
+                rank = team["stats"][0]["value"]
+                name = team["team"]["displayName"]
+                points = team["stats"][1]["value"]
+
+                standings.append(f"{rank}. {name} - {points} pts")
+
+        message = "🏆 **UEFA Champions League Standings** 🏆\n```" + "\n".join(standings) + "```"
+        await ctx.send(message)
+
+    except Exception as e:
+        await ctx.send("⚠️ Error retrieving UCL standings.")
+        print(f"Error: {e}")
+
+### **4. Player & Team Stats** (`!ucl_team_stats team_name`)
+@bot.command()
+async def ucl_team_stats(ctx, *, team_name):
+    url = f"{BASE_URL}/teams"
+
+    try:
+        response = requests.get(url)
+        data = response.json()
+
+        if "sports" not in data:
+            await ctx.send("❌ No UCL teams found.")
+            return
+
+        teams = data["sports"][0]["leagues"][0]["teams"]
+        for team in teams:
+            if team_name.lower() in team["team"]["displayName"].lower():
+                name = team["team"]["displayName"]
+                abbreviation = team["team"].get("abbreviation", "N/A")
+                team_url = team["team"]["links"][0]["href"]
+
+                message = f"📊 **{name} ({abbreviation})**\n🔗 [More Info]({team_url})"
+                await ctx.send(message)
+                return
+
+        await ctx.send(f"❌ Team '{team_name}' not found in UCL.")
+
+    except Exception as e:
+        await ctx.send("⚠️ Error retrieving UCL team stats.")
+        print(f"Error: {e}")
+
+### **5. Latest UCL News** (`!ucl_news`)
+@bot.command()
+async def ucl_news(ctx):
+    url = f"{BASE_URL}/news"
+
+    try:
+        response = requests.get(url)
+        data = response.json()
+
+        if "articles" not in data:
+            await ctx.send("❌ No UCL news available.")
+            return
+
+        news_list = []
+        for article in data["articles"][:5]:  # Get top 5 news articles
+            title = article["headline"]
+            link = article["links"]["web"]["href"]
+            news_list.append(f"📰 [{title}]({link})")
+
+        message = "📰 **Latest UEFA Champions League News** 📰\n" + "\n".join(news_list)
+        await ctx.send(message)
+
+    except Exception as e:
+        await ctx.send("⚠️ Error retrieving UCL news.")
+        print(f"Error: {e}")
+
+### **Run the Bot**
 bottoken = os.getenv("TOKEN")
 bot.run(bottoken)
