@@ -53,4 +53,17 @@ Base URL: http://site.api.espn.com/apis/site/v2/sports/soccer/uefa.champions/tea
     ]
 }
 
+🔄 Updated Discord Bot: Integrated UCL Live Scores, Fixtures, Standings, Team Stats & News
+
+- Added `!ucl_scores`: Fetches live Champions League match updates.
+- Added `!ucl_fixtures`: Retrieves upcoming UCL match schedules.
+- Added `!ucl_standings`: Displays current UCL group standings.
+- Added `!ucl_team_stats <team>`: Shows stats for a specific UCL team.
+- Added `!ucl_news`: Fetches the latest Champions League news.
+- Improved error handling for missing API data.
+- Ensured environment variables are correctly handled.
+- Optimized message formatting for better Discord readability.
+
+🚀 Now the bot provides real-time UEFA Champions League updates directly in Discord! ⚽🔥
+
 
