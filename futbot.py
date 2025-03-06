@@ -12,6 +12,7 @@ bot = commands.Bot(command_prefix="!", help_command=None, intents=intents)
 # ESPN API Base URL
 BASE_URL = "http://site.api.espn.com/apis/site/v2/sports/soccer/uefa.champions"
 
+
 ### **1. Live Match Updates** (`!ucl_scores`)
 @bot.command()
 async def ucl_scores(ctx):
@@ -27,20 +28,27 @@ async def ucl_scores(ctx):
 
         matches = []
         for event in data["events"]:
-            home = event["competitions"][0]["competitors"][0]["team"]["displayName"]
-            away = event["competitions"][0]["competitors"][1]["team"]["displayName"]
-            home_score = event["competitions"][0]["competitors"][0].get("score", "N/A")
-            away_score = event["competitions"][0]["competitors"][1].get("score", "N/A")
+            home = event["competitions"][0]["competitors"][0]["team"][
+                "displayName"]
+            away = event["competitions"][0]["competitors"][1]["team"][
+                "displayName"]
+            home_score = event["competitions"][0]["competitors"][0].get(
+                "score", "N/A")
+            away_score = event["competitions"][0]["competitors"][1].get(
+                "score", "N/A")
             status = event["status"]["type"]["description"]
 
-            matches.append(f"⚽ {home} **{home_score} - {away_score}** {away} ({status})")
+            matches.append(
+                f"⚽ {home} **{home_score} - {away_score}** {away} ({status})")
 
-        message = "🏆 **Live UEFA Champions League Scores** 🏆\n```" + "\n".join(matches) + "```"
+        message = "🏆 **Live UEFA Champions League Scores** 🏆\n```" + "\n".join(
+            matches) + "```"
         await ctx.send(message)
 
     except Exception as e:
         await ctx.send("⚠️ Error retrieving UCL scores.")
         print(f"Error: {e}")
+
 
 ### **2. Upcoming Fixtures** (`!ucl_fixtures`)
 @bot.command()
@@ -57,18 +65,22 @@ async def ucl_fixtures(ctx):
 
         fixtures = []
         for event in data["events"]:
-            home = event["competitions"][0]["competitors"][0]["team"]["displayName"]
-            away = event["competitions"][0]["competitors"][1]["team"]["displayName"]
+            home = event["competitions"][0]["competitors"][0]["team"][
+                "displayName"]
+            away = event["competitions"][0]["competitors"][1]["team"][
+                "displayName"]
             date = event["date"]
 
             fixtures.append(f"📅 {home} vs {away} - {date}")
 
-        message = "📅 **Upcoming UEFA Champions League Matches** 📅\n```" + "\n".join(fixtures) + "```"
+        message = "📅 **Upcoming UEFA Champions League Matches** 📅\n```" + "\n".join(
+            fixtures) + "```"
         await ctx.send(message)
 
     except Exception as e:
         await ctx.send("⚠️ Error retrieving UCL fixtures.")
         print(f"Error: {e}")
+
 
 ### **3. League Standings & Group Stage Table** (`!ucl_standings`)
 @bot.command()
@@ -94,12 +106,14 @@ async def ucl_standings(ctx):
 
                 standings.append(f"{rank}. {name} - {points} pts")
 
-        message = "🏆 **UEFA Champions League Standings** 🏆\n```" + "\n".join(standings) + "```"
+        message = "🏆 **UEFA Champions League Standings** 🏆\n```" + "\n".join(
+            standings) + "```"
         await ctx.send(message)
 
     except Exception as e:
         await ctx.send("⚠️ Error retrieving UCL standings.")
         print(f"Error: {e}")
+
 
 ### **4. Player & Team Stats** (`!ucl_team_stats team_name`)
 @bot.command()
@@ -131,6 +145,7 @@ async def ucl_team_stats(ctx, *, team_name):
         await ctx.send("⚠️ Error retrieving UCL team stats.")
         print(f"Error: {e}")
 
+
 ### **5. Latest UCL News** (`!ucl_news`)
 @bot.command()
 async def ucl_news(ctx):
@@ -150,13 +165,20 @@ async def ucl_news(ctx):
             link = article["links"]["web"]["href"]
             news_list.append(f"📰 [{title}]({link})")
 
-        message = "📰 **Latest UEFA Champions League News** 📰\n" + "\n".join(news_list)
+        message = "📰 **Latest UEFA Champions League News** 📰\n" + "\n".join(
+            news_list)
         await ctx.send(message)
 
     except Exception as e:
         await ctx.send("⚠️ Error retrieving UCL news.")
         print(f"Error: {e}")
 
-### **Run the Bot**
-bottoken = os.getenv("TOKEN")
+
+bottoken = os.getenv("TOKEN", "").strip()  # Ensure it's a string
+if not bottoken:
+    print(
+        "❌ ERROR: No Discord bot token found! Set your TOKEN environment variable."
+    )
+    exit()
+
 bot.run(bottoken)
